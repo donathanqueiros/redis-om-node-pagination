@@ -48,9 +48,8 @@ const generateData = async () => {
 
   const numId = 25000;
 
-  const origins = Array.from(
-    { length: numOrigin },
-    (_) => `${randomString(6)}.com`
+  const origins = ["localhost.com"].concat(
+    Array.from({ length: numOrigin - 1 }, (_) => `${randomString(6)}.com`)
   );
 
   const ids = [-1].concat(Array.from({ length: numId - 1 }, (_, i) => i));
@@ -64,33 +63,33 @@ const generateData = async () => {
 };
 
 const pagination = async ({ offset = 0, limit = 10, search = "" }) => {
-  const { results } = await redis.ft.aggregate("user:index", `*`, {
-    STEPS: [
-      {
-        type: AggregateSteps.GROUPBY,
-        properties: ["@origin"],
-        REDUCE: [
-          {
-            type: AggregateGroupByReducers.COUNT,
-            AS: "total",
-          },
-        ],
-      },
-      {
-        type: AggregateSteps.SORTBY,
-        BY: ["@total", "DESC"],
-      },
-      {
-        type: AggregateSteps.LIMIT,
-        from: offset,
-        size: limit,
-      },
-      {
-        type: AggregateSteps.FILTER,
-        expression: `contains(@origin,"${search}")`,
-      },
-    ],
-  });
+  const { results } = await redis.ft.aggregate(
+    "user:index",
+    search ? `@origin:{ *${search}* }` : "*",
+    {
+      STEPS: [
+        {
+          type: AggregateSteps.GROUPBY,
+          properties: ["@origin"],
+          REDUCE: [
+            {
+              type: AggregateGroupByReducers.COUNT,
+              AS: "total",
+            },
+          ],
+        },
+        {
+          type: AggregateSteps.SORTBY,
+          BY: ["@total", "DESC"],
+        },
+        {
+          type: AggregateSteps.LIMIT,
+          from: offset,
+          size: limit,
+        },
+      ],
+    }
+  );
 
   const origins = results.map((result) => result.origin);
 
@@ -159,12 +158,16 @@ const pagination = async ({ offset = 0, limit = 10, search = "" }) => {
 
 const start = async () => {
   await redis.connect();
-  await redis.flushAll();
+  // await redis.flushAll();
   await userRepository.createIndex();
-  await generateData();
+  // await generateData();
 
   const startTime = new Date().getTime();
-  const paginationResult = await pagination({ offset: 0, limit: 100 });
+  const paginationResult = await pagination({
+    offset: 0,
+    limit: 25,
+    search: "",
+  });
   console.log("Time taken: ", new Date().getTime() - startTime);
 
   console.log(paginationResult.length);
