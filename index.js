@@ -43,7 +43,7 @@ const generateData = async () => {
   };
 
   const numRows = 20000;
-  const numOrigin = 20;
+  const numOrigin = 600;
   const numModule = 3;
 
   const numId = 25000;
@@ -140,29 +140,29 @@ const pagination = async ({ offset = 0, limit = 10, search = "" }) => {
   );
 
   //   problem here
-  const { results: resultss } = await redis.ft.aggregate("user:index", "*", {
-    LOAD: ["@origin"],
-    STEPS: [
-      {
-        type: AggregateSteps.FILTER,
-        expression: `${origins
-          .map((origin) => `@origin=='${origin}'`)
-          .join(" || ")}`,
-      },
-      {
-        type: AggregateSteps.GROUPBY,
-        properties: ["@id", "@origin"],
-        REDUCE: [],
-      },
-    ],
-  });
+//   const { results: resultss } = await redis.ft.aggregate("user:index", "*", {
+//     LOAD: ["@origin"],
+//     STEPS: [
+//       {
+//         type: AggregateSteps.FILTER,
+//         expression: `${origins
+//           .map((origin) => `@origin=='${origin}'`)
+//           .join(" || ")}`,
+//       },
+//       {
+//         type: AggregateSteps.GROUPBY,
+//         properties: ["@id", "@origin"],
+//         REDUCE: [],
+//       },
+//     ],
+//   });
 
-  paginationRes.forEach((res) => {
-    const origin = res.origin;
-    const uniqueIds = resultss.filter((result) => result.origin === origin);
-    // console.log(uniqueIds);
-    res.uniqueIds = uniqueIds.length;
-  });
+//   paginationRes.forEach((res) => {
+//     const origin = res.origin;
+//     const uniqueIds = resultss.filter((result) => result.origin === origin);
+//     // console.log(uniqueIds);
+//     res.uniqueIds = uniqueIds.length;
+//   });
 
   return paginationRes;
 };
@@ -174,7 +174,7 @@ const start = async () => {
 //   await generateData();
 
   const startTime = new Date().getTime();
-  const paginationResult = await pagination({ offset: 0, limit: 10 });
+  const paginationResult = await pagination({ offset: 0, limit: 100 });
   console.log("Time taken: ", new Date().getTime() - startTime);
 
   console.log(paginationResult.length);
