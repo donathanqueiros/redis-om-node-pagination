@@ -1,0 +1,18 @@
+{
+  "name": "redis-om-node-pagination",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "nodemon index.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "nodemon": "^3.0.3",
+    "redis": "^4.6.13",
+    "redis-om": "^0.4.3"
+  }
+}
