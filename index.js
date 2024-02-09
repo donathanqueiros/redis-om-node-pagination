@@ -9,7 +9,7 @@ const redis = createClient({
   url: "redis://localhost:6379",
 });
 redis.on("error", (err) => console.log("Redis Client Error", err));
-redis.on("connect", () => console.log("Redis Client Connected"));
+redis.on("connect", () => console.log("Redis Connected"));
 
 const userSchema = new Schema("user", {
   origin: {
@@ -42,7 +42,7 @@ const generateData = async () => {
     return Math.floor(Math.random() * (max - min + 1) + min);
   };
 
-  const numRows = 20000;
+  const numRows = 30000;
   const numOrigin = 600;
   const numModule = 3;
 
@@ -64,7 +64,7 @@ const generateData = async () => {
 };
 
 const pagination = async ({ offset = 0, limit = 10, search = "" }) => {
-  const { results } = await redis.ft.aggregate("user:index", "*", {
+  const { results } = await redis.ft.aggregate("user:index", `*`, {
     STEPS: [
       {
         type: AggregateSteps.GROUPBY,
@@ -129,49 +129,39 @@ const pagination = async ({ offset = 0, limit = 10, search = "" }) => {
         .eq(-1)
         .count();
 
+      const { results: resultss } = await redis.ft.aggregate(
+        "user:index",
+        `@origin:{ ${origin.replace(/\./g, "\\.")} }`,
+        {
+          STEPS: [
+            {
+              type: AggregateSteps.GROUPBY,
+              properties: ["@id", "@origin"],
+              REDUCE: [],
+            },
+          ],
+        }
+      );
+
       return {
         origin,
         module1,
         module2,
         module3,
+        uniqueIds: resultss.filter((result) => result.origin === origin).length,
         totalIdnull,
       };
     })
   );
-
-  //   problem here
-//   const { results: resultss } = await redis.ft.aggregate("user:index", "*", {
-//     LOAD: ["@origin"],
-//     STEPS: [
-//       {
-//         type: AggregateSteps.FILTER,
-//         expression: `${origins
-//           .map((origin) => `@origin=='${origin}'`)
-//           .join(" || ")}`,
-//       },
-//       {
-//         type: AggregateSteps.GROUPBY,
-//         properties: ["@id", "@origin"],
-//         REDUCE: [],
-//       },
-//     ],
-//   });
-
-//   paginationRes.forEach((res) => {
-//     const origin = res.origin;
-//     const uniqueIds = resultss.filter((result) => result.origin === origin);
-//     // console.log(uniqueIds);
-//     res.uniqueIds = uniqueIds.length;
-//   });
 
   return paginationRes;
 };
 
 const start = async () => {
   await redis.connect();
-//   await redis.flushAll();
+  await redis.flushAll();
   await userRepository.createIndex();
-//   await generateData();
+  await generateData();
 
   const startTime = new Date().getTime();
   const paginationResult = await pagination({ offset: 0, limit: 100 });
